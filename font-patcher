@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import argparse
 import json
 import os
@@ -6,8 +8,6 @@ import tempfile
 from itertools import count
 from pathlib import Path
 from urllib import request
-
-from ipdb import set_trace
 
 font_file_extentions = ["ttf", "otf", "sfd"]
 
