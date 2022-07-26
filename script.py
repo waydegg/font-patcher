@@ -7,21 +7,23 @@ from itertools import count
 from pathlib import Path
 from urllib import request
 
+from ipdb import set_trace
+
 font_file_extentions = ["ttf", "otf", "sfd"]
 
 base_url = "https://api.github.com/repos/ryanoasis/nerd-fonts/contents"
 headers = {"Accept": "application/vnd.github.v3.raw"}
 
 
-def download_font_patcher():
+def _download_font_patcher():
     print("Downloading script: font-patcher")
     request.urlretrieve(
         "https://raw.githubusercontent.com/ryanoasis/nerd-fonts/master/font-patcher",
-        "font-patcher",
+        "data/font-patcher",
     )
 
 
-def download_glyphs(*, local_path: str | Path, remote_path: str | Path):
+def _download_glyphs(*, local_path: str | Path, remote_path: str | Path):
     local_path = Path(local_path) if isinstance(local_path, str) else local_path
     remote_path = Path(remote_path) if isinstance(remote_path, str) else remote_path
 
@@ -40,15 +42,23 @@ def download_glyphs(*, local_path: str | Path, remote_path: str | Path):
         if file_type == "dir":
             next_local_path = os.path.join(local_path, file_remote_path.parts[-1])
             next_remote_path = file_remote_path
-            download_glyphs(local_path=next_local_path, remote_path=next_remote_path)
+            _download_glyphs(local_path=next_local_path, remote_path=next_remote_path)
 
         if file_type == "file":
             _, file_extention = os.path.splitext(file_full_name)
             if file_extention[1:] not in font_file_extentions:
                 continue
             print(f"Downloading glyphs: {file_full_name}")
-            download_path = str(file_remote_path).split("/", 1)[1]
+            download_path = os.path.join(local_path, file_full_name)
             request.urlretrieve(obj["download_url"], download_path)
+
+
+def download_resources():
+    data_dir = Path("data")
+    data_dir.mkdir(exist_ok=True)
+
+    _download_font_patcher()
+    _download_glyphs(local_path="data/glyphs", remote_path="src/glyphs")
 
 
 def _extract_ttx_font(*, unpatched_ttc_fp: str, unpatched_ttx_fp: str, ttc_idx: int):
@@ -84,11 +94,11 @@ def _patch_ttf_font(*, unpatched_ttf_fp, output_dir):
         [
             "fontforge",
             "-script",
-            "./font-patcher",
+            "./data/font-patcher",
             unpatched_ttf_fp,
             "--complete",
             "--glyphdir",
-            "./glyphs/",
+            "./data/glyphs/",
             "--outputdir",
             output_dir,
         ],
@@ -155,7 +165,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not args.skip_downloads:
-        download_font_patcher()
-        download_glyphs(local_path="glyphs", remote_path="src/glyphs")
+        download_resources()
 
     patch_font(args.unpatched_font_fp)
