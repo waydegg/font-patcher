@@ -52,7 +52,6 @@ def download_glyphs(*, local_path: str | Path, remote_path: str | Path):
 
 
 def _extract_ttx_font(*, unpatched_ttc_fp: str, unpatched_ttx_fp: str, ttc_idx: int):
-    print(f"Extracting {unpatched_ttx_fp}")
     try:
         subprocess.run(
             [
@@ -139,6 +138,9 @@ def patch_font(unpatched_font_fp: str | Path):
             )
         else:
             print(f"File extension '{unpatched_font_ext}' not supported")
+            return
+
+    print("Done!")
 
 
 if __name__ == "__main__":
