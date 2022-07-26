@@ -72,8 +72,6 @@ def _extract_ttx_font(*, unpatched_ttc_fp: str, unpatched_ttx_fp: str, ttc_idx: 
 
 
 def _compile_ttx_font(*, unpatched_ttx_fp, unpatched_ttf_fp):
-    # unpatched_font_ttf_fp = f"{temp_dir}/{idx}.ttf"
-    print(f"Compiling {unpatched_ttx_fp}")
     subprocess.run(
         ["ttx", "-o", unpatched_ttf_fp, unpatched_ttx_fp],
         stdout=subprocess.DEVNULL,
@@ -82,7 +80,6 @@ def _compile_ttx_font(*, unpatched_ttx_fp, unpatched_ttf_fp):
 
 
 def _patch_ttf_font(*, unpatched_ttf_fp, output_dir):
-    print(f"Patching {unpatched_ttf_fp}")
     subprocess.run(
         [
             "fontforge",
@@ -121,18 +118,20 @@ def patch_font(unpatched_font_fp: str | Path):
                     break
 
                 # Compile the .ttx file into a .ttf file
+                print(f"[{idx}/x] Compiling .ttf ")
                 unpatched_ttf_fp = f"{temp_dir}/{idx}.ttf"
                 _compile_ttx_font(
                     unpatched_ttx_fp=unpatched_ttx_fp, unpatched_ttf_fp=unpatched_ttf_fp
                 )
 
                 # Patch the .ttf file
+                print(f"[{idx}/x] Patching .ttf")
                 _patch_ttf_font(
                     unpatched_ttf_fp=unpatched_ttf_fp, output_dir=patched_fonts_dir
                 )
 
         elif unpatched_font_ext == ".ttf":
-            # Patch the .ttf file
+            print(f"Patching {unpatched_font_fp}")
             _patch_ttf_font(
                 unpatched_ttf_fp=unpatched_font_fp, output_dir=patched_fonts_dir
             )
