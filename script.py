@@ -1,5 +1,9 @@
+import argparse
 import json
 import os
+import subprocess
+import tempfile
+from itertools import count
 from pathlib import Path
 from urllib import request
 
@@ -47,32 +51,41 @@ def download_glyphs(*, local_path: str | Path, remote_path: str | Path):
             request.urlretrieve(obj["download_url"], download_path)
 
 
-def patch_font(raw_font_path: str | Path):
-    raw_font_path = Path(raw_font_path)
-    raw_font_name = raw_font_path.name.split(".")[0]
+def _extract_ttx_font(*, unpatched_ttc_fp: str, unpatched_ttx_fp: str, ttc_idx: int):
+    print(f"Extracting {unpatched_ttx_fp}")
+    try:
+        subprocess.run(
+            [
+                "ttx",
+                "-y",
+                str(ttc_idx),
+                "-o",
+                unpatched_ttx_fp,
+                unpatched_ttc_fp,
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+            check=True,
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
-    fonts_path = Path("fonts")
-    font_path = os.path.join(fonts_path, raw_font_name)
-    unpatched_fonts_path = Path(os.path.join(font_path, "unpatched"))
-    patched_font_path = Path(os.path.join(font_path, "patched"))
 
-    unpatched_fonts_path.mkdir(parents=True, exist_ok=True)
-    patched_font_path.mkdir(exist_ok=True)
+def _compile_ttx_font(*, unpatched_ttx_fp, unpatched_ttf_fp):
+    # unpatched_font_ttf_fp = f"{temp_dir}/{idx}.ttf"
+    print(f"Compiling {unpatched_ttx_fp}")
+    subprocess.run(
+        ["ttx", "-o", unpatched_ttf_fp, unpatched_ttx_fp],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT,
+    )
 
-    font_weights = ["regular", "bold", "italic", "bold-italic"]
-    for idx, font_weight in enumerate(font_weights):
-        font_weight_msg = f"{font_weight.capitalize()} {raw_font_name}"
 
-        print(f"Extracting {font_weight_msg}")
-        unpatched_ttx_fp = os.path.join(unpatched_fonts_path, font_weight) + ".ttx"
-        os.system(f"ttx -y {idx} -q -o {unpatched_ttx_fp} {raw_font_path}")
-
-        print(f"Compiling {font_weight_msg}")
-        unpatched_ttf_fp = os.path.join(unpatched_fonts_path, font_weight) + ".ttf"
-        os.system(f"ttx -q -o {unpatched_ttf_fp} {unpatched_ttx_fp} ")
-
-        print(f"Patching {font_weight_msg}")
-        patching_args = [
+def _patch_ttf_font(*, unpatched_ttf_fp, output_dir):
+    print(f"Patching {unpatched_ttf_fp}")
+    subprocess.run(
+        [
             "fontforge",
             "-script",
             "./font-patcher",
@@ -81,20 +94,67 @@ def patch_font(raw_font_path: str | Path):
             "--glyphdir",
             "./glyphs/",
             "--outputdir",
-            str(patched_font_path),
-            ">/dev/null 2>&1",
-        ]
-        patching_command = " ".join(patching_args)
-        os.system(patching_command)
+            output_dir,
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT,
+    )
+
+
+def patch_font(unpatched_font_fp: str | Path):
+    unpatched_font_fp = Path(unpatched_font_fp)
+    unpatched_font_fn, unpatched_font_ext = os.path.splitext(unpatched_font_fp.name)
+
+    patched_fonts_dir = Path(f"fonts/{unpatched_font_fn}")
+    patched_fonts_dir.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        if unpatched_font_ext == ".ttc":
+            for idx in count(0):
+                # Extract a .ttx file
+                unpatched_ttx_fp = f"{temp_dir}/{idx}.ttx"
+                ok = _extract_ttx_font(
+                    unpatched_ttc_fp=str(unpatched_font_fp),
+                    unpatched_ttx_fp=unpatched_ttx_fp,
+                    ttc_idx=idx,
+                )
+                if not ok:
+                    break
+
+                # Compile the .ttx file into a .ttf file
+                unpatched_ttf_fp = f"{temp_dir}/{idx}.ttf"
+                _compile_ttx_font(
+                    unpatched_ttx_fp=unpatched_ttx_fp, unpatched_ttf_fp=unpatched_ttf_fp
+                )
+
+                # Patch the .ttf file
+                _patch_ttf_font(
+                    unpatched_ttf_fp=unpatched_ttf_fp, output_dir=patched_fonts_dir
+                )
+
+        elif unpatched_font_ext == ".ttf":
+            # Patch the .ttf file
+            _patch_ttf_font(
+                unpatched_ttf_fp=unpatched_font_fp, output_dir=patched_fonts_dir
+            )
+        else:
+            print(f"File extension '{unpatched_font_ext}' not supported")
 
 
 if __name__ == "__main__":
-    # Download font patcher script
-    download_font_patcher()
+    parser = argparse.ArgumentParser(description="Patch a .ttc or .ttf font file")
+    parser.add_argument(
+        "unpatched_font_fp", type=str, help="path to a .ttc or .ttf file"
+    )
+    parser.add_argument(
+        "--skip-downloads",
+        help="skip downloading the helper script and any glyphs",
+        action="store_true",
+    )
+    args = parser.parse_args()
 
-    # Download glyphs
-    download_glyphs(local_path="glyphs", remote_path="src/glyphs")
+    if not args.skip_downloads:
+        download_font_patcher()
+        download_glyphs(local_path="glyphs", remote_path="src/glyphs")
 
-    patch_font("/System/Library/Fonts/Menlo.ttc")
-    # patch_font("/System/Library/Fonts/Avenir.ttc")
-    # patch_font("/System/Library/Fonts/Noteworthy.ttc")
+    patch_font(args.unpatched_font_fp)
