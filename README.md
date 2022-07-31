@@ -1,10 +1,8 @@
 # font-patcher
 
-A tool for patching any .ttf or .ttc font
+A tool for patching any TrueType font or TrueType Collection
 
 ## Setup
-
-The following CLI tools are needed to run this script:
 
 ### 1. Install [Font Tools](https://github.com/fonttools/fonttools)
 
@@ -59,3 +57,13 @@ options:
   -h, --help         show this help message and exit
   --skip-downloads   skip downloading the helper script and any glyphs
 ```
+
+## Extra details
+
+This script has been tested on OSX Monterey, probably works on Linux, and might have
+issues working on Windows. Please submit an issue if you are having problems running
+this script.
+
+Some system TrueType fonts are un-patchable, however the Nerd Font script that this tool
+leverages won't raise any exceptions. From manually tests, it seems that a lot of these
+un-patchable fonts are non-english.
