@@ -65,5 +65,5 @@ issues working on Windows. Please submit an issue if you are having problems run
 this script.
 
 Some system TrueType fonts are un-patchable, however the Nerd Font script that this tool
-leverages won't raise any exceptions. From manually tests, it seems that a lot of these
+leverages won't raise any exceptions. From manual tests, it seems that a lot of these
 un-patchable fonts are non-english.
