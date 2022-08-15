@@ -2,6 +2,8 @@
 
 A tool for patching any TrueType font or TrueType Collection
 
+A walkthrough of how this works: https://wayde.gg/articles/how-to-patch-a-font.html
+
 ## Setup
 
 ### 1. Install [Font Tools](https://github.com/fonttools/fonttools)
