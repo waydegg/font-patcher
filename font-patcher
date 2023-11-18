@@ -100,10 +100,11 @@ def _patch_ttf_font(*, unpatched_ttf_fp, output_dir):
             "--glyphdir",
             "./data/glyphs/",
             "--outputdir",
-            output_dir,
+            str(output_dir.resolve()),
+            "--makegroups", 
+            "0"
         ],
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT,
     )
 
 
